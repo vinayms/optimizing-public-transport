@@ -1,0 +1,12 @@
+cd producers
+python simulation.py
+
+
+cd consumers
+faust -A faust_stream worker -l info
+
+cd consumers
+python ksql.py
+
+cd consumers
+python server.py

@@ -18,8 +18,6 @@ class Lines:
         self.blue_line = Line("blue")
 
     def process_message(self, message):
-        logger.info("some change printing **** ")
-        logger.info("ignoring non-lines message %s", message.topic())
         """Processes a station message"""
         if "org.chicago.cta.station" in message.topic():
             value = message.value()

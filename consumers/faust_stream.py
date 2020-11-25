@@ -32,10 +32,11 @@ class TransformedStation(faust.Record):
 # TODO: Define a Faust Stream that ingests data from the Kafka Connect stations topic and
 #   places it into a new topic with only the necessary information.
 app = faust.App("stations-stream", broker="kafka://localhost:9092", store="memory://")
+
 # TODO: Define the input Kafka Topic. Hint: What topic did Kafka Connect output to?
 topic = app.topic("org.chicago.cta.stations", value_type=Station)
 # TODO: Define the output Kafka Topic
-out_topic = app.topic("org.chicago.cta.stations.table.v1", partitions=1,value_type=TransformedStation)
+out_topic = app.topic("org.chicago.cta.stations.table.v1", partitions=1)
 # TODO: Define a Faust Table
 #table = app.Table(
 #    # "TODO",
@@ -44,10 +45,10 @@ out_topic = app.topic("org.chicago.cta.stations.table.v1", partitions=1,value_ty
 #    changelog_topic=out_topic,
 #)
 table = app.Table(
-    "stations_count",
-    default=int,
+    name="org.chicago.cta.stations.table.v1",
+    default=TransformedStation,
     partitions=1,
-    changelog_topic=out_topic
+    changelog_topic=out_topic,
 )
 
 #
@@ -60,16 +61,16 @@ table = app.Table(
 @app.agent(topic)
 async def process(stream):
     async for s in stream:
-        line = None
-        if s.red == True:
-            line = "red"
-        elif s.green ==True:
-            line = "green"
-        elif s.blue == True:
-            line = "blue"
+        if s.red:
+            line = 'red'
+        elif s.blue:
+            line = 'blue'
         else:
-            logger.error("No line information !")
-        await out_topic.sent(value={"station_id":s.station_id,"station_name":s.station_name,"order":s.order,"line":line})
+            line = 'green'
+
+        transformed_station = TransformedStation(s.station_id, s.stop_name, s.order, line)
+        table[transformed_station.station_id] = transformed_station
+        #await out_topic.sent(value={"station_id":s.station_id,"station_name":s.station_name,"order":s.order,"line":line})
         
 if __name__ == "__main__":
     app.main()

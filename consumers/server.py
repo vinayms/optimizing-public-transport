@@ -55,7 +55,7 @@ def run_server():
 
     weather_model = Weather()
     lines = Lines()
-    logger.info("some changes----------------")
+    
     application = tornado.web.Application(
         [(r"/", MainHandler, {"weather": weather_model, "lines": lines})]
     )
@@ -64,7 +64,7 @@ def run_server():
     # Build kafka consumers
     consumers = [
         KafkaConsumer(
-            "org.cta.weather.v1",
+            "org.chicago.cta.weather.v1",
             weather_model.process_message,
             offset_earliest=True,
         ),
@@ -86,7 +86,6 @@ def run_server():
             is_avro=False,
         ),
     ]
-    logger.info("craeted --- some changes----------------")
     try:
         logger.info(
             f"Open a web browser to http://localhost:{WEB_SERVER_PORT} to see the Transit Status Page"

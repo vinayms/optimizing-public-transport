@@ -9,7 +9,7 @@ from tornado import gen
 
 
 logger = logging.getLogger(__name__)
-BROKER_URL="PLAINTEXT://localhost:9092"
+BROKER_URL="PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094"
 
 class KafkaConsumer:
     """Defines the base kafka consumer class"""
@@ -38,7 +38,7 @@ class KafkaConsumer:
         #
         self.broker_properties = {
             "bootstrap.servers":BROKER_URL,
-            "group.id":"station-groups-consumer-id-1",
+            "group.id":f'{topic_name_pattern}',
             "auto.offset.reset":"earliest"
         }
 
@@ -60,9 +60,9 @@ class KafkaConsumer:
         """Callback for when topic assignment takes place"""
         # TODO: If the topic is configured to use `offset_earliest` set the partition offset to
         # the beginning or earliest
-        if self.offset_earliest:
-            for partition in partitions:
-                partitions.offset = confluent_kafka.OFFSET_BEGINNING
+        for partition in partitions:
+            if self.offset_earliest:
+                partition.offset = confluent_kafka.OFFSET_BEGINNING
         
         logger.info("partitions assigned for %s", self.topic_name_pattern)
         consumer.assign(partitions)
@@ -85,15 +85,15 @@ class KafkaConsumer:
         #
         try:
             message = self.consumer.poll(self.consume_timeout)
-        except SerializeError as e:
-            print("Serialize/Deserialize error {} : {}".format(msg,e))
+        except Exception as e:
+            logger.error(f'Consumer polling Exception {e}')
             return 0
+
         if message is None:
-            print("No message recieved!")
+            logger.debug('No message recived!')
             return 0
         elif message.error() is not None:
-            print(f"Error Recieved {message.error()}")
-            return 0
+            logger.error(f'message error {message.error()}')
         else:
             self.message_handler(message)
             return 1

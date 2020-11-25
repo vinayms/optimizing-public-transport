@@ -38,7 +38,8 @@ class Station(Producer):
         #
         #
         #topic_name = f"{station_name}" # TODO: Come up with a better topic name
-        topic_name = f"cta.stream.station.arrivals.{station_name}"
+        #topic_name = f"cta.stream.station.arrivals.{station_name}"
+        topic_name = 'org.chicago.cta.station.arrivals.v1'
         super().__init__(
             topic_name,
             key_schema=Station.key_schema,

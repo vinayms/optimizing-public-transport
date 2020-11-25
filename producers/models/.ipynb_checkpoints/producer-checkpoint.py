@@ -8,7 +8,7 @@ from confluent_kafka.admin import AdminClient, NewTopic
 from confluent_kafka.avro import AvroProducer
 
 logger = logging.getLogger(__name__)
-BROKER_URL = "PLAINTEXT://localhost:9092"
+BROKER_URL = "PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094"
 SCHEMA_REGISTRY_URL="PLAINTEXT://localhost:8081"
 
 class Producer:
@@ -22,8 +22,8 @@ class Producer:
         topic_name,
         key_schema,
         value_schema=None,
-        num_partitions=6,
-        num_replicas=2,
+        num_partitions=1,
+        num_replicas=1,
     ):
         """Initializes a Producer object with basic settings"""
         self.topic_name = topic_name
@@ -40,13 +40,13 @@ class Producer:
         #
         self.broker_properties = {
             "bootstrap.servers":BROKER_URL,
-            "client.id":"cta_1",
-            "linger.ms":10000,
-            "compression.type":"lz4",
+            #"client.id":"cta_1",
+            #"linger.ms":10000,
+            #"compression.type":"lz4",
             "schema.registry.url": "http://localhost:8081"
             #"queue.buffering.mx.messages":100000
         }
-        self.client = AdminClient({"bootstrap.servers":BROKER_URL})
+        self.admin_client = AdminClient({"bootstrap.servers":BROKER_URL})
 
         # If the topic does not already exist, try to create it
         if self.topic_name not in Producer.existing_topics:
@@ -69,11 +69,13 @@ class Producer:
         # the Kafka Broker.
         #
         #
+        if self.topic_exists(self.topic_name):
+            return
         logger.info(f"Creating new topic :{self.topic_name}")
-        topic_meta = self.client.list_topics()
+        topic_meta = self.admin_client.list_topics()
         if topic_meta.topics.get(self.topic_name) is None:
-            fs = self.client.create_topics(
-            [NewTopic(self.topic_name,
+            fs = self.admin_client.create_topics(
+            [NewTopic(topic=self.topic_name,
                       num_partitions=self.num_partitions,
                       replication_factor=self.num_replicas)])
             for topic, f in fs.items():
@@ -88,14 +90,14 @@ class Producer:
 
     def close(self):
         """Prepares the producer for exit by cleaning up the producer"""
-        #
-        #
-        # TODO: Write cleanup code for the Producer here
-        #
-        #
         logger.info("closing producer")
-        self.producer.flush()
+        self.producer.flush(timeout=5)
 
     def time_millis(self):
         """Use this function to get the key for Kafka Events"""
         return int(round(time.time() * 1000))
+    
+    def topic_exists(self, topic_name):
+        """Checks if the given topic exists"""
+        topic_metadata = self.admin_client.list_topics(timeout=5)
+        return topic_name in set(t.topic for t in iter(topic_metadata.topics.values()))

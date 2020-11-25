@@ -38,7 +38,7 @@ class Turnstile(Producer):
         #
         #
         super().__init__(
-            "cta.stream.station.turnstile", # TODO: Come up with a better topic name
+            "org.chicago.cta.turnstile.v1", # TODO: Come up with a better topic name
             key_schema=Turnstile.key_schema,
             value_schema=Turnstile.value_schema,
             num_partitions=1,
@@ -50,7 +50,7 @@ class Turnstile(Producer):
     def run(self, timestamp, time_step):
         """Simulates riders entering through the turnstile."""
         num_entries = self.turnstile_hardware.get_entries(timestamp, time_step)
-        logger.info(f"number of entries turnstile : {num_entries}")
+        #logger.info(f"number of entries turnstile : {num_entries}")
         #
         #
         # TODO: Complete this function by emitting a message to the turnstile topic for the number
@@ -60,9 +60,12 @@ class Turnstile(Producer):
         for entries in range(num_entries):
             self.producer.produce(
                 topic=self.topic_name,
-                key={"timestamp":int(timestamp.timestamp()*1000)},
+                key_schema=self.key_schema,
+                value_schema=self.value_schema,
+                key={"timestamp": self.time_millis()},
                 value={
-                    "station_id":int(self.station.station_id),
+                    "station_id":self.station.station_id,
                     "station_name":self.station.name,
-                    "line":str(self.station.color)
-                })
+                    "line":self.station.color.name,
+                }
+            )
